@@ -72,9 +72,7 @@ export class TasksService {
     try {
       const task = await this.taskModel.findById(id);
 
-      if (!task) {
-        throw new NotFoundException(CANT_FIND_MSG);
-      }
+      if (!task) throw new NotFoundException(CANT_FIND_MSG);
 
       return task;
     } catch (ex) {
@@ -82,6 +80,16 @@ export class TasksService {
     }
   }
 
-  //TODO: add abilty to delete todo
+  async deleteTask(id: string) {
+    let product;
+    try {
+      product = await this.taskModel.findById(id);
+    } catch (ex) {
+      if (!product) throw new NotFoundException(CANT_FIND_MSG);
+    }
+
+    await this.taskModel.findByIdAndDelete(id);
+  }
+
   //TODO: add ability to mark task as finished
 }
