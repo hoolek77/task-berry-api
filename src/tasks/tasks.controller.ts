@@ -56,6 +56,12 @@ export class TasksController {
     return task;
   }
 
+  @Put('finished/:id')
+  async changeFinished(@Param('id') id: string) {
+    const task = await this.tasksService.changeFinished(id);
+    return task;
+  }
+
   @Delete(':id')
   async deleteTask(@Param('id') id: string) {
     await this.tasksService.deleteTask(id);

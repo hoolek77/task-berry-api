@@ -68,6 +68,31 @@ export class TasksService {
     return task;
   }
 
+  async deleteTask(id: string) {
+    let task;
+    try {
+      task = await this.taskModel.findById(id);
+    } catch (ex) {
+      if (!task) throw new NotFoundException(CANT_FIND_MSG);
+    }
+
+    await this.taskModel.findByIdAndDelete(id);
+  }
+
+  async changeFinished(id: string): Promise<Task> {
+    try {
+      const task = await this.findTaskById(id);
+
+      task.finished = !task.finished;
+
+      task.save();
+
+      return task;
+    } catch (ex) {
+      throw new NotFoundException(CANT_FIND_MSG);
+    }
+  }
+
   async findTaskById(id: string): Promise<Task> {
     try {
       const task = await this.taskModel.findById(id);
@@ -79,17 +104,4 @@ export class TasksService {
       throw new NotFoundException(CANT_FIND_MSG);
     }
   }
-
-  async deleteTask(id: string) {
-    let product;
-    try {
-      product = await this.taskModel.findById(id);
-    } catch (ex) {
-      if (!product) throw new NotFoundException(CANT_FIND_MSG);
-    }
-
-    await this.taskModel.findByIdAndDelete(id);
-  }
-
-  //TODO: add ability to mark task as finished
 }
