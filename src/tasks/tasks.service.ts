@@ -1,107 +1,84 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CANT_FIND_MSG } from 'src/constants';
-
-import { Task } from './task.model';
+import { Task } from './interfaces/task.interface';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { User } from 'src/auth/interfaces/user.interface';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(@InjectModel('Task') private readonly taskModel: Model<Task>) {}
+  private logger = new Logger('TaskService');
 
-  async getTasks(): Promise<Task[]> {
-    const tasks = await this.taskModel.find();
-    return tasks;
-  }
+  constructor(
+    @InjectModel('Task')
+    private readonly taskModel: Model<Task>,
+  ) {}
 
-  async getTaskById(id: string): Promise<Task> {
-    const task = await this.findTaskById(id);
-
-    return task;
-  }
-
-  async addTask(
-    title: string,
-    description: string,
-    color: string,
-    date: string,
-  ): Promise<string> {
-    const dateFormatted = new Date(date);
+  async createTask(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
+    const { title, description, color } = createTaskDto;
 
     const task = new this.taskModel({
       title,
       description,
       color,
-      date: dateFormatted,
+      userId: user._id,
     });
 
-    const result = await task.save();
-    return result.id;
-  }
-
-  async updateTask(
-    id: string,
-    title?: string,
-    description?: string,
-    color?: string,
-    date?: string,
-  ): Promise<Task> {
-    const task = await this.findTaskById(id);
-
-    if (title) {
-      task.title = title;
+    try {
+      await task.save();
+    } catch (error) {
+      throw new InternalServerErrorException();
     }
-
-    if (description) {
-      task.description = description;
-    }
-
-    if (color) {
-      task.color = color;
-    }
-
-    if (date) {
-      task.date = new Date(date);
-    }
-
-    await task.save();
     return task;
   }
 
-  async deleteTask(id: string) {
-    let task;
-    try {
-      task = await this.taskModel.findById(id);
-    } catch (ex) {
-      if (!task) throw new NotFoundException(CANT_FIND_MSG);
+  async getTaskById(id: string, user: User): Promise<Task> {
+    const task = await this.taskModel.findById(id);
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
     }
 
-    await this.taskModel.findByIdAndDelete(id);
+    if (String(task.userId) != String(user._id)) {
+      throw new UnauthorizedException('This is not your task id');
+    }
+
+    return task;
   }
 
-  async changeFinished(id: string): Promise<Task> {
+  async getTasks(user: User): Promise<Task[]> {
     try {
-      const task = await this.findTaskById(id);
-
-      task.finished = !task.finished;
-
-      task.save();
-
-      return task;
-    } catch (ex) {
-      throw new NotFoundException(CANT_FIND_MSG);
+      const tasks = this.taskModel.find({ userId: user._id });
+      return tasks;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tasks for user "${user.email}".}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException();
     }
   }
 
-  async findTaskById(id: string): Promise<Task> {
+  async deleteTaskById(id: string, user: User): Promise<void> {
     try {
       const task = await this.taskModel.findById(id);
 
-      if (!task) throw new NotFoundException(CANT_FIND_MSG);
+      if (String(task.userId) != String(user._id)) {
+        throw new UnauthorizedException('This is not your task id');
+      }
 
-      return task;
-    } catch (ex) {
-      throw new NotFoundException(CANT_FIND_MSG);
+      await this.taskModel.findByIdAndDelete(id);
+      this.logger.verbose(`User "${user.email}" deleted task with ID "${id}".`);
+    } catch (error) {
+      throw new InternalServerErrorException();
     }
   }
+
+  //TODO: add methods for updating task and changing finished property
 }

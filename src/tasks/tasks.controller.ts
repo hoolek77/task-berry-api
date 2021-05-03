@@ -1,69 +1,73 @@
 import {
-  Body,
   Controller,
-  Delete,
+  Logger,
+  Post,
+  UsePipes,
+  ValidationPipe,
+  Body,
+  UseGuards,
   Get,
   Param,
-  Post,
+  Delete,
+  Patch,
   Put,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { User } from 'src/auth/interfaces/user.interface';
+import { Task } from './interfaces/task.interface';
+import { GetUser } from 'src/auth/get-user.decorator';
+import { AuthGuard } from '@nestjs/passport';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Controller('tasks')
+@UseGuards(AuthGuard('jwt'))
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
-
-  @Get()
-  async getTasks() {
-    const tasks = await this.tasksService.getTasks();
-    return tasks;
-  }
-
-  @Get(':id')
-  async getTaskById(@Param('id') id: string) {
-    const task = await this.tasksService.getTaskById(id);
-
-    return task;
-  }
+  private logger = new Logger('TasksController');
+  constructor(private tasksService: TasksService) {}
 
   @Post()
-  async addTask(
-    @Body('title') title: string,
-    @Body('description') desc: string,
-    @Body('color') color: string,
-    @Body('date') date: string,
-  ) {
-    const id = await this.tasksService.addTask(title, desc, color, date);
-    return { id };
+  @UsePipes(ValidationPipe)
+  createTask(
+    @Body() createTaskDto: CreateTaskDto,
+    @GetUser() user: User,
+  ): Promise<Task> {
+    console.log(user);
+    return this.tasksService.createTask(createTaskDto, user);
   }
 
-  @Put(':id')
-  async updateTask(
+  @Get('/:id')
+  getTaskById(@Param('id') id: string, @GetUser() user: User): Promise<Task> {
+    return this.tasksService.getTaskById(id, user);
+  }
+
+  @Get()
+  getTasks(@GetUser() user: User): Promise<Task[]> {
+    this.logger.verbose(`User "${user.email}" retrieving all tasks.}`);
+    return this.tasksService.getTasks(user);
+  }
+
+  @Delete('/:id')
+  deleteTaskById(
     @Param('id') id: string,
-    @Body('title') title?: string,
-    @Body('description') desc?: string,
-    @Body('color') color?: string,
-    @Body('date') date?: string,
-  ) {
-    const task = await this.tasksService.updateTask(
-      id,
-      title,
-      desc,
-      color,
-      date,
-    );
-
-    return task;
+    @GetUser() user: User,
+  ): Promise<void> {
+    return this.tasksService.deleteTaskById(id, user);
   }
 
-  @Put('finished/:id')
-  async changeFinished(@Param('id') id: string) {
-    const task = await this.tasksService.changeFinished(id);
-    return task;
-  }
+  @Put(':id/edit')
+  @UsePipes(ValidationPipe)
+  updateTask(
+    @Param('id') id: string,
+    @Body() updateTaskDto: UpdateTaskDto,
+    @GetUser() user: User,
+  ) {}
 
-  @Delete(':id')
-  async deleteTask(@Param('id') id: string) {
-    await this.tasksService.deleteTask(id);
-  }
+  @Put(':id/update-status')
+  @UsePipes(ValidationPipe)
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateTaskDto: UpdateTaskDto,
+    @GetUser() user: User,
+  ) {}
 }

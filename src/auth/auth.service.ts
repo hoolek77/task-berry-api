@@ -1,39 +1,80 @@
-import { Injectable } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { JwtService } from '@nestjs/jwt';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { User } from 'src/users/user.model';
+import { InjectModel } from '@nestjs/mongoose';
+import { AuthDto } from './dto/auth.dto';
+import { JwtService } from '@nestjs/jwt';
+import { SignInDto } from './dto/signIn.dto';
+import { UserObject } from './schemas/user.schema';
+import { JwtPayload } from './jwt-payload.interface';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
+  private logger = new Logger('AuthService');
+
   constructor(
-    private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
+    @InjectModel('User')
+    private readonly userModel: Model<UserObject>,
+    private jwtService: JwtService,
   ) {}
 
-  //TODO: add error catching
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findOneByEmail(email);
-    const match = await bcrypt.compare(pass, user.password);
-    if (match) {
-      const { password, ...result } = user;
-      return result;
-    }
-    return null;
+  async hashPassword(password: string, salt: string): Promise<string> {
+    return bcrypt.hash(password, salt);
   }
 
-  async register(user: User) {
-    return await this.usersService.create(user);
+  async signUp(authDto: AuthDto): Promise<{ email: string; name: string }> {
+    const { name, email, password } = authDto;
+
+    const user = new this.userModel();
+    user.name = name;
+    user.email = email;
+    user.salt = await bcrypt.genSalt();
+    user.password = await this.hashPassword(password, user.salt);
+
+    const isExist = await this.userModel.findOne({ email: user.email });
+    if (isExist) {
+      throw new BadRequestException(
+        `User with email: ${user.email} already exist!`,
+      );
+    }
+
+    try {
+      await user.save();
+      return { email: user.email, name: user.name };
+    } catch (error) {
+      throw new InternalServerErrorException();
+    }
   }
 
-  async login(user: any) {
-    const result = await this.validateUser(user.email, user.password);
-    if (result === null) {
-      return { statusCode: 401, message: 'Unauthorized' };
+  async validateUserPassword(signInDto: SignInDto): Promise<string> {
+    const { email, password } = signInDto;
+    const user = await this.userModel.findOne({ email });
+
+    if (user && (await user.validatePassword(password))) {
+      return user.email;
+    } else {
+      return null;
     }
-    const payload = { username: result.email, sub: result._id };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  }
+
+  async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
+    const email = await this.validateUserPassword(signInDto);
+    if (!email) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload: JwtPayload = { email };
+    const accessToken = await this.jwtService.sign(payload);
+
+    this.logger.debug(
+      `Generated JWT Token with payload ${JSON.stringify(payload)}`,
+    );
+    return { accessToken };
   }
 }
