@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
@@ -11,11 +10,10 @@ import { Task } from './interfaces/task.interface';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { User } from 'src/auth/interfaces/user.interface';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { CANT_FIND_MSG, NOT_AUTHORIZED_MSG } from 'src/constants';
 
 @Injectable()
 export class TasksService {
-  private logger = new Logger('TaskService');
-
   constructor(
     @InjectModel('Task')
     private readonly taskModel: Model<Task>,
@@ -42,11 +40,11 @@ export class TasksService {
   async getTaskById(id: string, user: User): Promise<Task> {
     const task = await this.taskModel.findById(id);
     if (!task) {
-      throw new NotFoundException(`Task with ID "${id}" not found`);
+      throw new NotFoundException(CANT_FIND_MSG);
     }
 
     if (!this.isAuthorized(user._id, task.userId)) {
-      throw new UnauthorizedException('This is not your task id');
+      throw new UnauthorizedException(NOT_AUTHORIZED_MSG);
     }
 
     return task;
@@ -55,29 +53,25 @@ export class TasksService {
   async getTasks(user: User): Promise<Task[]> {
     try {
       const tasks = this.taskModel.find({ userId: user._id });
+
       return tasks;
     } catch (error) {
-      this.logger.error(
-        `Failed to get tasks for user "${user.email}".}`,
-        error.stack,
-      );
       throw new InternalServerErrorException();
     }
   }
 
   async deleteTaskById(id: string, user: User): Promise<void> {
-    try {
-      const task = await this.taskModel.findById(id);
+    const task = await this.taskModel.findById(id);
 
-      if (this.isAuthorized(user._id, task.userId)) {
-        await this.taskModel.findByIdAndDelete(id);
-        this.logger.verbose(
-          `User "${user.email}" deleted task with ID "${id}".`,
-        );
-      }
-    } catch (error) {
-      throw new InternalServerErrorException();
+    if (!task) {
+      throw new NotFoundException(CANT_FIND_MSG);
     }
+
+    if (!this.isAuthorized(user._id, task.userId)) {
+      throw new UnauthorizedException(NOT_AUTHORIZED_MSG);
+    }
+
+    await this.taskModel.findByIdAndDelete(id);
   }
 
   async updateTask(
@@ -86,12 +80,15 @@ export class TasksService {
     updateTaskDto: UpdateTaskDto,
   ): Promise<Task> {
     const { title, description, color } = updateTaskDto;
+
     const task = await this.taskModel.findById(id);
 
+    if (!task) {
+      throw new NotFoundException(CANT_FIND_MSG);
+    }
+
     if (!this.isAuthorized(user._id, task.userId)) {
-      throw new UnauthorizedException(
-        'You are not authorized to get this task',
-      );
+      throw new UnauthorizedException(NOT_AUTHORIZED_MSG);
     }
 
     task.title = title ?? task.title;
@@ -104,21 +101,22 @@ export class TasksService {
   }
 
   async changeFinished(id: string, user: User): Promise<Task> {
-    try {
-      const task = await this.taskModel.findById(id);
+    const task = await this.taskModel.findById(id);
 
-      if (this.isAuthorized(user._id, task.userId)) {
-        task.finished = !task.finished;
-        await task.save();
-        return task;
-      }
-    } catch (ex) {
-      throw new InternalServerErrorException();
+    if (!task) {
+      throw new NotFoundException(CANT_FIND_MSG);
     }
+
+    if (!this.isAuthorized(user._id, task.userId)) {
+      throw new UnauthorizedException(NOT_AUTHORIZED_MSG);
+    }
+
+    task.finished = !task.finished;
+    await task.save();
+    return task;
   }
 
-  isAuthorized(userId, userIdFromTask): boolean {
+  private isAuthorized(userId, userIdFromTask): boolean {
     return String(userId) != String(userIdFromTask) ? false : true;
   }
-  //TODO: add methods for updating task and changing finished property
 }
