@@ -72,9 +72,6 @@ export class AuthService {
     const payload: JwtPayload = { email };
     const accessToken = await this.jwtService.sign(payload);
 
-    this.logger.debug(
-      `Generated JWT Token with payload ${JSON.stringify(payload)}`,
-    );
     return { accessToken };
   }
 }
