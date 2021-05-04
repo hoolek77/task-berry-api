@@ -20,8 +20,4 @@ export class UpdateTaskDto {
   @MaxLength(7)
   @IsNotEmpty()
   color: string;
-
-  @IsOptional()
-  @IsNotEmpty()
-  finished: boolean;
 }

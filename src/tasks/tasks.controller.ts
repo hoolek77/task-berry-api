@@ -9,7 +9,6 @@ import {
   Get,
   Param,
   Delete,
-  Patch,
   Put,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
@@ -61,13 +60,12 @@ export class TasksController {
     @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
     @GetUser() user: User,
-  ) {}
+  ) {
+    return this.tasksService.updateTask(id, user, updateTaskDto);
+  }
 
-  @Put(':id/update-status')
-  @UsePipes(ValidationPipe)
-  updateStatus(
-    @Param('id') id: string,
-    @Body() updateTaskDto: UpdateTaskDto,
-    @GetUser() user: User,
-  ) {}
+  @Put(':id/update-finished')
+  updateStatus(@Param('id') id: string, @GetUser() user: User) {
+    return this.tasksService.changeFinished(id, user);
+  }
 }
