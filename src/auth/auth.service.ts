@@ -52,26 +52,30 @@ export class AuthService {
     }
   }
 
-  async validateUserPassword(signInDto: SignInDto): Promise<string> {
+  async validateUserPassword(
+    signInDto: SignInDto,
+  ): Promise<{ email: string; name: string }> {
     const { email, password } = signInDto;
     const user = await this.userModel.findOne({ email });
 
     if (user && (await user.validatePassword(password))) {
-      return user.email;
+      return { email: user.email, name: user.name };
     } else {
       return null;
     }
   }
 
-  async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
-    const email = await this.validateUserPassword(signInDto);
+  async signIn(
+    signInDto: SignInDto,
+  ): Promise<{ accessToken: string; email: string; name: string }> {
+    const { email, name } = await this.validateUserPassword(signInDto);
     if (!email) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload: JwtPayload = { email };
+    const payload: JwtPayload = { email, name };
     const accessToken = await this.jwtService.sign(payload);
 
-    return { accessToken };
+    return { accessToken, email, name };
   }
 }

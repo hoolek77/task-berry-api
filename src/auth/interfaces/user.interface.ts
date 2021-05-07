@@ -7,5 +7,4 @@ export interface User extends Document {
   email: string;
   password: string;
   salt: string;
-  tasks: mongoose.Types.DocumentArray<Task>;
 }
