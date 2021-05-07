@@ -30,7 +30,7 @@ Task Manager API built with NestJS and MongoDB
 
 ```bash
   yarn install
-  yarn run:dev
+  yarn start:dev
 ```
 
 ## Author
