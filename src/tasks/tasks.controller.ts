@@ -1,6 +1,5 @@
 import {
   Controller,
-  Logger,
   Post,
   UsePipes,
   ValidationPipe,
@@ -22,7 +21,6 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @Controller('tasks')
 @UseGuards(AuthGuard('jwt'))
 export class TasksController {
-  private logger = new Logger('TasksController');
   constructor(private tasksService: TasksService) {}
 
   @Post()
@@ -42,7 +40,6 @@ export class TasksController {
 
   @Get()
   getTasks(@GetUser() user: User): Promise<Task[]> {
-    this.logger.verbose(`User "${user.email}" retrieving all tasks.}`);
     return this.tasksService.getTasks(user);
   }
 

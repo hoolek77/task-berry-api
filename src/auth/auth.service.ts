@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   InternalServerErrorException,
   BadRequestException,
   UnauthorizedException,
@@ -16,8 +15,6 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
-  private logger = new Logger('AuthService');
-
   constructor(
     @InjectModel('User')
     private readonly userModel: Model<UserObject>,
