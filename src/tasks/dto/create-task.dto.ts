@@ -1,4 +1,4 @@
-import { IsNotEmpty, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, MaxLength, MinLength } from 'class-validator';
 
 export class CreateTaskDto {
   @IsNotEmpty()
@@ -7,7 +7,7 @@ export class CreateTaskDto {
   @IsNotEmpty()
   description: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   label: string;
 
   @MinLength(7)
