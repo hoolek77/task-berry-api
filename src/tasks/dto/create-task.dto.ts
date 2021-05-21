@@ -7,6 +7,9 @@ export class CreateTaskDto {
   @IsNotEmpty()
   description: string;
 
+  @IsNotEmpty()
+  label: string;
+
   @MinLength(7)
   @MaxLength(7)
   @IsNotEmpty()

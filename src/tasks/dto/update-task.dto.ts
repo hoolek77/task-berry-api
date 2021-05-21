@@ -16,6 +16,10 @@ export class UpdateTaskDto {
   description: string;
 
   @IsOptional()
+  @IsNotEmpty()
+  label: string;
+
+  @IsOptional()
   @MinLength(7)
   @MaxLength(7)
   @IsNotEmpty()

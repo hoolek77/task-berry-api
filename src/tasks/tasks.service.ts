@@ -20,13 +20,14 @@ export class TasksService {
   ) {}
 
   async createTask(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
-    const { title, description, color } = createTaskDto;
+    const { title, description, color, label } = createTaskDto;
 
     const task = new this.taskModel({
       title,
       description,
       color,
       userId: user._id,
+      label,
     });
 
     try {
@@ -79,7 +80,7 @@ export class TasksService {
     user: User,
     updateTaskDto: UpdateTaskDto,
   ): Promise<Task> {
-    const { title, description, color } = updateTaskDto;
+    const { title, description, color, label } = updateTaskDto;
 
     const task = await this.taskModel.findById(id);
 
@@ -94,6 +95,7 @@ export class TasksService {
     task.title = title ?? task.title;
     task.description = description ?? task.description;
     task.color = color ?? task.color;
+    task.label = label ?? task.label;
 
     await task.save();
 

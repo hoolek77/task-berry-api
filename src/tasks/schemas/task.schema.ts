@@ -15,6 +15,10 @@ export const TaskSchema = new mongoose.Schema({
     trim: true,
     required: true,
   },
+  label: {
+    type: String,
+    trim: true,
+  },
   color: {
     type: String,
     minLength: 7,
