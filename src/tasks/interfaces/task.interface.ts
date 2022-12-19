@@ -1,7 +1,7 @@
 import { Document } from 'mongoose';
 import * as mongoose from 'mongoose';
 
-export interface Task extends Document {
+export interface TaskWithoutDocument {
   title: string;
   description: string;
   label?: string;
@@ -9,3 +9,5 @@ export interface Task extends Document {
   userId: mongoose.Schema.Types.ObjectId;
   color: string;
 }
+
+export type Task = TaskWithoutDocument & Document;
